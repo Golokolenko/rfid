@@ -18,7 +18,7 @@
 #include <MFRC522.h>      // Библиотека RFID модуля MFRC522
 #include <EEPROM.h>       // Библиотека EEPROM для хранения ключей
 #include <Wire.h>
-#include "RTClib.h"
+#include <DS3231.h>
 
 #define LOCK_TIMEOUT  1000  // Время до блокировки замка после закрытия двери в мс 
 #define MAX_TAGS        3   // Максимальное количество хранимых меток - ключей 
@@ -36,7 +36,7 @@
 #define EE_START_ADDR  0  // Стартовый адрес для хранения данных в EEPROM
 #define EE_KEY         100 // Ключ для идентификации правильности данных в EEPROM
 
-DS3231 clock;
+DS3231 rtc;
 DateTime now;
 MFRC522 rfid(CS_PIN, RST_PIN); // Создаем экземпляр объекта MFRC522
 Servo doorServo;                // Обьект серво
