@@ -18,7 +18,7 @@
 #include <MFRC522.h>      // Библиотека RFID модуля MFRC522
 #include <EEPROM.h>       // Библиотека EEPROM для хранения ключей
 #include <Wire.h>
-#include <DS3231.h>
+#include <RTClib.h>
 
 #define LOCK_TIMEOUT  1000  // Время до блокировки замка после закрытия двери в мс 
 #define MAX_TAGS        3   // Максимальное количество хранимых меток - ключей 
@@ -36,11 +36,9 @@
 #define EE_START_ADDR  0  // Стартовый адрес для хранения данных в EEPROM
 #define EE_KEY         100 // Ключ для идентификации правильности данных в EEPROM
 
-DS3231 clock;
-RTCDateTime dt;
 MFRC522 rfid(CS_PIN, RST_PIN); // Создаем экземпляр объекта MFRC522
 Servo doorServo;                // Обьект серво
-
+RTC_DS3231 rtc;
 #define DECLINE 0   // Отказ
 #define SUCCESS 1   // Успешно
 #define SAVED   2   // Новая метка записана
@@ -77,9 +75,9 @@ void setup() {
   SPI.begin();
   rfid.PCD_Init();
   Wire.begin();
-  clock.begin();
-  clock.setDateTime(__21.03.2023__, __13:08__);
-}
+  rtc.begin();
+  rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+
   // Настраиваем пины
   pinMode(BTN_PIN, INPUT_PULLUP);
   pinMode(DOOR_PIN, INPUT_PULLUP);
@@ -126,16 +124,6 @@ void setup() {
 }
 
 void loop() {
-  dt = clock.getDateTime();
-
-  // Вывод текущей даты и времени
-  Serial.print("Дата и время: ");
-  Serial.print(dt.year);   Serial.print("-");
-  Serial.print(dt.month);  Serial.print("-");
-  Serial.print(dt.day);    Serial.print(" ");
-  Serial.print(dt.hour);   Serial.print(":");
-  Serial.print(dt.minute); Serial.print(":");
-  Serial.println(dt.second);
   static uint32_t lockTimeout;             // Таймер таймаута для блокировки замка
 
   // Открытие по нажатию кнопки изнутри
@@ -277,7 +265,19 @@ void saveOrDeleteTag(uint8_t *tag, uint8_t size) {
   } else {                                                    // лимит меток при попытке записи новой
     indicate(DECLINE);                                        // Выдаем отказ
     ledSetup(SUCCESS);
-   delay(1000);
-}
+    DateTime now = rtc.now();
+  Serial.print(now.year(), DEC);
+  Serial.print('/');
+  Serial.print(now.month(), DEC);
+  Serial.print('/');
+  Serial.print(now.day(), DEC);
+  Serial.print(' ');
+  Serial.print(now.hour(), DEC);
+  Serial.print(':');
+  Serial.print(now.minute(), DEC);
+  Serial.print(':');
+  Serial.print(now.second(), DEC);
+  Serial.println();
+  delay(1000);
   }
 }
