@@ -68,7 +68,16 @@ void unlock(void) {             // Функция должна разблоки�
 bool locked = true;       // Флаг состояния замка
 bool needLock = false;    // Служебный флаг
 uint8_t savedTags = 0;    // кол-во записанных меток
-
+void printTime() {
+  DateTime now = rtc.now();
+  Serial.print("Time: ");
+  Serial.print(now.hour(), DEC);
+  Serial.print(':');
+  Serial.print(now.minute(), DEC);
+  Serial.print(':');
+  Serial.print(now.second(), DEC);
+  Serial.println();
+}
 void setup() {
   // Инициализируем все
   Serial.begin(9600);
@@ -76,7 +85,7 @@ void setup() {
   rfid.PCD_Init();
   Wire.begin();
   rtc.begin();
-  rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+  rtc.adjust(DateTime(2023, 3, 21, 12, 0, 0));
 
   // Настраиваем пины
   pinMode(BTN_PIN, INPUT_PULLUP);
@@ -95,8 +104,7 @@ void setup() {
       break;                        // Выходим из цикла
     }
   }
-
-  // Инициализация EEPROM
+// Инициализация EEPROM
   if (needClear or EEPROM.read(EE_START_ADDR) != EE_KEY) { // при первом включении или необходимости очистки ключей
     for (uint16_t i = 0; i < EEPROM.length(); i++) EEPROM.write(i, 0x00); // Чистим всю EEPROM
     EEPROM.write(EE_START_ADDR, EE_KEY);                   // Пишем байт-ключ
@@ -132,6 +140,15 @@ void loop() {
     unlock();                              // Разблокируем замок
     lockTimeout = millis();                // Запомнили время
     locked = false;                        // Замок разлочен
+  DateTime now = rtc.now();  // получаем текущее время
+  Serial.print("Time: ");
+  Serial.print(now.hour(), DEC);
+  Serial.print(':');
+  Serial.print(now.minute(), DEC);
+  Serial.print(':');
+  Serial.print(now.second(), DEC);
+  Serial.println();
+  delay(1000);
   }
 
   // Проверка концевика двери
