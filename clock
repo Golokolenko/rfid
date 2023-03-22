@@ -65,7 +65,19 @@ void unlock(void) {             // Функция должна разблоки�
 }
 void printTime() {
   DateTime now = rtc.now();
-  Serial.print("Time: ");
+  Serial.print("Date: ");
+  Serial.print(now.year(), DEC);
+  Serial.print('/');
+  if (now.month() < 10) {
+    Serial.print('0');
+  }
+  Serial.print(now.month(), DEC);
+  Serial.print('/');
+  if (now.day() < 10) {
+    Serial.print('0');
+  }
+  Serial.print(now.day(), DEC);
+  Serial.print(" Time: ");
   if (now.hour() < 10) {
     Serial.print("0");
   }
