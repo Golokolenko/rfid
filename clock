@@ -95,7 +95,7 @@ void setup() {
   Wire.begin();
   rtc.begin();
   rtc.writeSqwPinMode(DS3231_SquareWave1Hz);
-  rtc.adjust(DateTime(2023, 3, 21, 22, 03, 0));
+  rtc.adjust(DateTime(2023, 3, 22, 14, 07, 0));
 
   // Настраиваем пины
   pinMode(BTN_PIN, INPUT_PULLUP);
@@ -150,7 +150,8 @@ void loop() {
     indicate(SUCCESS);                     // Зеленый лед
     unlock();                              // Разблокируем замок
     lockTimeout = millis();                // Запомнили время
-    locked = false;                        // Замок разлочен
+    locked = false;
+    printTime();// Замок разлочен
   }
 
   // Проверка концевика двери
@@ -284,6 +285,22 @@ void saveOrDeleteTag(uint8_t *tag, uint8_t size) {
   } else {                                                    // лимит меток при попытке записи новой
     indicate(DECLINE);                                        // Выдаем отказ
     ledSetup(SUCCESS);
+    DateTime now = rtc.now();
+    Serial.print(now.year(), DEC);
+    Serial.print('/');
+    Serial.print(now.month(), DEC);
+    Serial.print('/');
+    Serial.print(now.day(), DEC);
+    Serial.print(' ');
+    Serial.print(now.hour(), DEC);
+    Serial.print(':');
+    Serial.print(now.minute(), DEC);
+    Serial.print(':');
+    Serial.print(now.second(), DEC);
+    Serial.println();
+    delay(1000);
   }
+ 
 }
+
 
