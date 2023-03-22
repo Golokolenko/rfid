@@ -18,7 +18,7 @@
 #include <MFRC522.h>      // Библиотека RFID модуля MFRC522
 #include <EEPROM.h>       // Библиотека EEPROM для хранения ключей
 #include <Wire.h>
-#include <DS3231.h>
+#include <RTClib.h>
 
 #define LOCK_TIMEOUT  1000  // Время до блокировки замка после закрытия двери в мс 
 #define MAX_TAGS        3   // Максимальное количество хранимых меток - ключей 
@@ -36,11 +36,9 @@
 #define EE_START_ADDR  0  // Стартовый адрес для хранения данных в EEPROM
 #define EE_KEY         100 // Ключ для идентификации правильности данных в EEPROM
 
-DS3231 rtc;
-DateTime now;
-MFRC522 rfid(CS_PIN, RST_PIN); // Создаем экземпляр объекта MFRC522
+MFRC522 rfid(CS_PIN, RST_PIN);  // Обьект RFID
 Servo doorServo;                // Обьект серво
-
+RTC_DS3231 rtc;
 #define DECLINE 0   // Отказ
 #define SUCCESS 1   // Успешно
 #define SAVED   2   // Новая метка записана
@@ -65,7 +63,25 @@ void unlock(void) {             // Функция должна разблоки�
   doorServo.detach();           // Детачим серво, чтобы не хрустела
   Serial.println("unlock");
 }
-
+void printTime() {
+  DateTime now = rtc.now();
+  Serial.print("Time: ");
+  if (now.hour() < 10) {
+    Serial.print("0");
+  }
+  Serial.print(now.hour());
+  Serial.print(":");
+  if (now.minute() < 10) {
+    Serial.print("0");
+  }
+  Serial.print(now.minute());
+  Serial.print(":");
+  if (now.second() < 10) {
+    Serial.print("0");
+  }
+  Serial.println(now.second());
+  delay(1000);
+}
 
 bool locked = true;       // Флаг состояния замка
 bool needLock = false;    // Служебный флаг
@@ -73,10 +89,13 @@ uint8_t savedTags = 0;    // кол-во записанных меток
 
 void setup() {
   // Инициализируем все
-  clock.begin();
   Serial.begin(9600);
   SPI.begin();
   rfid.PCD_Init();
+  Wire.begin();
+  rtc.begin();
+  rtc.writeSqwPinMode(DS3231_SquareWave1Hz);
+  rtc.adjust(DateTime(2023, 3, 21, 22, 03, 0));
 
   // Настраиваем пины
   pinMode(BTN_PIN, INPUT_PULLUP);
@@ -122,22 +141,12 @@ void setup() {
   }
 
 }
-void printDateTime() {
-  DateTime dt = clock.now();
-  Serial.print(dt.year()); Serial.print("-");
-  Serial.print(dt.month()); Serial.print("-");
-  Serial.print(dt.day()); Serial.print(" ");
-  Serial.print(dt.hour()); Serial.print(":");
-  Serial.print(dt.minute()); Serial.print(":");
-  Serial.println(dt.second());
-}
 
 void loop() {
   static uint32_t lockTimeout;             // Таймер таймаута для блокировки замка
 
   // Открытие по нажатию кнопки изнутри
   if (locked and !digitalRead(BTN_PIN)) {  // Если дверь закрыта и нажали кнопку
-    printDateTime();                       // Добавьте этот вызов
     indicate(SUCCESS);                     // Зеленый лед
     unlock();                              // Разблокируем замок
     lockTimeout = millis();                // Запомнили время
@@ -163,30 +172,28 @@ void loop() {
       saveOrDeleteTag(rfid.uid.uidByte, rfid.uid.size);              // Сохраняем или удаляем метку
     } else if (locked) {                                             // Иначе если замок заблокирован
       if (foundTag(rfid.uid.uidByte, rfid.uid.size) >= 0) {          // Ищем метку в базе
-        printDateTime();                                             // Добавьте этот вызов
         indicate(SUCCESS);                                           // Если нашли - подаем сигнал успеха
         unlock();                                                    // Разблокируем
         lockTimeout = millis();                                      // Обновляем таймаут
         locked = false;                                              // Замок разблокирован
       } else if (millis() - rfidTimeout >= 500) {                    // Метка не найдена (с таймаутом)
-        printDateTime();                                             // Добавьте этот вызов
         indicate(DECLINE);                                           // Выдаем отказ
       }
     }
-    rfidTimeout = millis();                                          // Обновляем таймаут
+    rfidTimeout = millis();                                          // Обвновляем таймаут
   }
 
-    // Перезагружаем RFID каждые 0.5 сек (для надежности)
-  static uint32_t rfidRebootTimer = millis();
-  if (millis() - rfidRebootTimer >= 500) {
-    rfid.PCD_Init(); // Инициализация RFID
-    rfidRebootTimer = millis(); // Обновляем таймер
+  // Перезагружаем RFID каждые 0.5 сек (для надежности)
+  static uint32_t rfidRebootTimer = millis(); // Таймер
+  if (millis() - rfidRebootTimer > 500) {     // Каждые 500 мс
+    rfidRebootTimer = millis();               // Обновляем таймер
     digitalWrite(RST_PIN, HIGH);              // Дергаем резет
     delay(1);
     digitalWrite(RST_PIN, LOW);
     rfid.PCD_Init();                          // Инициализируем модуль
   }
 }
+
 // Устанавливаем состояние светодиодов
 void ledSetup(bool state) {
   if (state) {  // Зеленый
