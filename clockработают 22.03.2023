@@ -107,7 +107,7 @@ void setup() {
   Wire.begin();
   rtc.begin();
   rtc.writeSqwPinMode(DS3231_SquareWave1Hz);
-  rtc.adjust(DateTime(2023, 3, 22, 14, 07, 0));
+  rtc.adjust(DateTime(2023, 3, 22, 15, 10, 0));
 
   // Настраиваем пины
   pinMode(BTN_PIN, INPUT_PULLUP);
@@ -160,11 +160,12 @@ void loop() {
 
   // Открытие по нажатию кнопки изнутри
   if (locked and !digitalRead(BTN_PIN)) {  // Если дверь закрыта и нажали кнопку
+    printTime();// Замок разлочен
     indicate(SUCCESS);                     // Зеленый лед
+    Serial.println("Door was opened by button press.");
     unlock();                              // Разблокируем замок
     lockTimeout = millis();                // Запомнили время
     locked = false;
-    printTime();// Замок разлочен
   }
 
   // Проверка концевика двери
@@ -187,6 +188,7 @@ void loop() {
     } else if (locked) {                                             // Иначе если замок заблокирован
       if (foundTag(rfid.uid.uidByte, rfid.uid.size) >= 0) {          // Ищем метку в базе
         printTime();// Замок разлочен
+        Serial.println("Door was opened by card.");
         indicate(SUCCESS);                                           // Если нашли - подаем сигнал успеха
         unlock();                                                    // Разблокируем
         lockTimeout = millis();                                      // Обновляем таймаут
@@ -296,6 +298,7 @@ void saveOrDeleteTag(uint8_t *tag, uint8_t size) {
   } else if (savedTags < MAX_TAGS) {                          // метка не найдена - нужно записать, и лимит не достигнут
     for (uint16_t i = 0; i < size; i++) EEPROM.write(i + newTagAddr, tag[i]); // Зная адрес пишем новую метку
     EEPROM.write(EE_START_ADDR + 1, ++savedTags);             // Увеличиваем кол-во меток и пишем
+    Serial.println("Card saved.");
     printTime();// Замок разлочен
     indicate(SAVED);                                          // Подаем сигнал
   } else {                                                    // лимит меток при попытке записи новой
