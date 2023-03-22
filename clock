@@ -140,7 +140,8 @@ void setup() {
     if (isOpen()) {         // И дверь сейчас открыта
       ledSetup(SUCCESS);    // Зеленый лед
       locked = false;       // Замок открыт
-      unlock();             // На всякий случай дернем замок
+      printTime();// Замок разлочен
+      unlock();// На всякий случай дернем замок
     } else {                // Метки есть, но дверь закрыта
       ledSetup(DECLINE);    // Красный лед
       locked = true;        // Замок закрыт
@@ -185,11 +186,13 @@ void loop() {
       saveOrDeleteTag(rfid.uid.uidByte, rfid.uid.size);              // Сохраняем или удаляем метку
     } else if (locked) {                                             // Иначе если замок заблокирован
       if (foundTag(rfid.uid.uidByte, rfid.uid.size) >= 0) {          // Ищем метку в базе
+        printTime();// Замок разлочен
         indicate(SUCCESS);                                           // Если нашли - подаем сигнал успеха
         unlock();                                                    // Разблокируем
         lockTimeout = millis();                                      // Обновляем таймаут
         locked = false;                                              // Замок разблокирован
       } else if (millis() - rfidTimeout >= 500) {                    // Метка не найдена (с таймаутом)
+        printTime();// Замок разлочен
         indicate(DECLINE);                                           // Выдаем отказ
       }
     }
@@ -293,9 +296,12 @@ void saveOrDeleteTag(uint8_t *tag, uint8_t size) {
   } else if (savedTags < MAX_TAGS) {                          // метка не найдена - нужно записать, и лимит не достигнут
     for (uint16_t i = 0; i < size; i++) EEPROM.write(i + newTagAddr, tag[i]); // Зная адрес пишем новую метку
     EEPROM.write(EE_START_ADDR + 1, ++savedTags);             // Увеличиваем кол-во меток и пишем
+    printTime();// Замок разлочен
     indicate(SAVED);                                          // Подаем сигнал
   } else {                                                    // лимит меток при попытке записи новой
+    printTime();// Замок разлочен
     indicate(DECLINE);                                        // Выдаем отказ
+    printTime();// Замок разлочен
     ledSetup(SUCCESS);
     DateTime now = rtc.now();
     Serial.print(now.year(), DEC);
@@ -314,5 +320,3 @@ void saveOrDeleteTag(uint8_t *tag, uint8_t size) {
   }
  
 }
-
-
